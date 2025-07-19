@@ -27,7 +27,7 @@ FIELDS = [
     "posts_analyzed",
     "avg_likes",
     "avg_comments",
-    "engagement_rate_%",
+    "engagement_rate_pct",
     "error"            # manter mesmo se quase sempre None
 ]
 
@@ -72,7 +72,7 @@ async def fetch_profile(client: httpx.AsyncClient, username: str) -> dict:
             "posts_analyzed": n_posts,
             "avg_likes": math.floor(likes_total / n_posts),
             "avg_comments": math.floor(comments_total / n_posts),
-            "engagement_rate_%": round(er, 2),
+            "engagement_rate_pct": round(er, 2),
             "error": None,
         }
     except httpx.HTTPStatusError as e:
@@ -91,8 +91,14 @@ async def main() -> None:
             raise ValueError("Input 'usernames' (uma lista de perfis) é obrigatório.")
 
         # 2. Configura o proxy
-        # O Actor.new_client() já usa as configurações de proxy do input automaticamente
-        async with httpx.AsyncClient(http2=True) as http:
+        # 1. Cria a configuração de proxy, solicitando um proxy RESIDENCIAL
+        proxy_configuration = await Actor.create_proxy_configuration(groups=['RESIDENTIAL'])
+
+        # 2. Cria um cliente HTTP que usará os proxies da Apify
+        async with httpx.AsyncClient(
+            http2=True,
+            proxies=await proxy_configuration.new_httpx_proxy(),
+        ) as http:
             
             # 3. Processa cada perfil
             for idx, username in enumerate(usernames, 1):
@@ -110,7 +116,7 @@ async def main() -> None:
                     "posts_analyzed": 0,
                     "avg_likes": 0,
                     "avg_comments": 0,
-                    "engagement_rate_%": 0.0,
+                    "engagement_rate_pct": 0.0,
                     "error": None,
                 }
                 row.update(result)

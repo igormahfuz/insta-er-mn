@@ -1,28 +1,47 @@
 {
-    "title": "Instagram Engagement Scraper Output",
-    "type": "object",
-    "schemaVersion": 1,
+    "actorOutputSchemaVersion": 1,
     "properties": {
         "username": {
-            "type": "string"
+            "type": "string",
+            "title": "Username",
+            "description": "O nome de usuário do Instagram.",
+            "template": "{{username}}"
         },
         "followers": {
-            "type": "integer"
+            "type": "string",
+            "title": "Seguidores",
+            "description": "O número de seguidores.",
+            "template": "{{followers}}"
         },
         "posts_analyzed": {
-            "type": "integer"
+            "type": "string",
+            "title": "Posts Analisados",
+            "description": "O número de posts analisados (máx. 12).",
+            "template": "{{posts_analyzed}}"
         },
         "avg_likes": {
-            "type": "integer"
+            "type": "string",
+            "title": "Média de Likes",
+            "description": "A média de likes nos posts analisados.",
+            "template": "{{avg_likes}}"
         },
         "avg_comments": {
-            "type": "integer"
+            "type": "string",
+            "title": "Média de Comentários",
+            "description": "A média de comentários nos posts analisados.",
+            "template": "{{avg_comments}}"
         },
-        "engagement_rate_%": {
-            "type": "number"
+        "engagement_rate_pct": {
+            "type": "string",
+            "title": "Taxa de Engajamento (%)",
+            "description": "A taxa de engajamento calculada.",
+            "template": "{{engagement_rate_pct}}"
         },
         "error": {
-            "type": "string"
+            "type": "string",
+            "title": "Erro",
+            "description": "Mensagem de erro, se houver.",
+            "template": "{{error}}"
         }
     }
 }
