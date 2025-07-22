@@ -13,38 +13,24 @@ from apify import Actor
 import httpx
 import math
 import asyncio
-import os
-from apify_client import ApifyClient
-
+import importlib.metadata
 
 IG_ENDPOINT = (
     "https://i.instagram.com/api/v1/users/web_profile_info/"
     "?username={username}"
 )
-FIELDS = [
-    "username",
-    "followers",
-    "posts_analyzed",
-    "avg_likes",
-    "avg_comments",
-    "engagement_rate_pct",
-    "error"            # manter mesmo se quase sempre None
-]
-
 
 HEADERS = {
-    # App‑ID usado pelos apps oficiais (público)
     "x-ig-app-id": "936619743392459",
-    # User‑Agent “normal” para evitar bloqueios triviais
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
     ),
 }
 
+# --- Função de Lógica Principal (sem modificação) ---
 
 async def fetch_profile(client: httpx.AsyncClient, username: str) -> dict:
-    """Baixa JSON público do perfil e devolve dicionário com ER."""
     url = IG_ENDPOINT.format(username=username)
     try:
         r = await client.get(url, headers=HEADERS, follow_redirects=True, timeout=30)
@@ -56,81 +42,114 @@ async def fetch_profile(client: httpx.AsyncClient, username: str) -> dict:
         followers = data.get("edge_followed_by", {}).get("count", 0)
         edges = data.get("edge_owner_to_timeline_media", {}).get("edges", [])[:12]
 
-        likes_total = 0
-        comments_total = 0
+        total_engagement_score = 0
         for edge in edges:
             node = edge.get("node", {})
-            likes_total += node.get("edge_liked_by", {}).get("count", 0)
-            comments_total += node.get("edge_media_to_comment", {}).get("count", 0)
+            post_score = node.get("edge_liked_by", {}).get("count", 0) + node.get("edge_media_to_comment", {}).get("count", 0)
+            if node.get('is_video', False):
+                post_score += node.get('video_view_count', 0)
+            total_engagement_score += post_score
 
         n_posts = max(len(edges), 1)
-        er = ((likes_total + comments_total) / n_posts) / followers * 100 if followers else 0
+        avg_engagement_score = total_engagement_score / n_posts
+        er = (avg_engagement_score / followers) * 100 if followers else 0
 
         return {
             "username": username,
             "followers": followers,
             "posts_analyzed": n_posts,
-            "avg_likes": math.floor(likes_total / n_posts),
-            "avg_comments": math.floor(comments_total / n_posts),
+            "avg_engagement_score": math.floor(avg_engagement_score),
             "engagement_rate_pct": round(er, 2),
             "error": None,
         }
-    except httpx.HTTPStatusError as e:
-        return {"username": username, "error": f"HTTP Error: {e.response.status_code}"}
     except Exception as e:
-        # Adiciona o tipo da exceção para facilitar o debug
-        return {"username": username, "error": f"{type(e).__name__}: {e}"}
+        raise e
 
+# --- Wrapper com Retentativas (sem modificação) ---
+
+async def fetch_with_retries(username: str, proxy_config) -> dict:
+    MAX_RETRIES = 3
+    BASE_DELAY_SECONDS = 2
+    last_error = None
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            session_id = f'session_{username}_{attempt}'
+            proxy_url = await proxy_config.new_url(session_id=session_id)
+            transport = httpx.AsyncHTTPTransport(proxy=proxy_url)
+            async with httpx.AsyncClient(transport=transport) as client:
+                return await fetch_profile(client, username)
+        except (httpx.HTTPStatusError, httpx.ProxyError, httpx.ReadTimeout) as e:
+            last_error = e
+            Actor.log.warning(f"Tentativa {attempt + 1}/{MAX_RETRIES} falhou para '{username}': {type(e).__name__}. Retentando...")
+            delay = BASE_DELAY_SECONDS * (2 ** attempt)
+            await asyncio.sleep(delay)
+        except Exception as e:
+            return {"username": username, "error": f"Erro inesperado: {type(e).__name__}: {e}"}
+
+    return {"username": username, "error": f"Falha após {MAX_RETRIES} tentativas: {type(last_error).__name__}"}
+
+# --- Função de Processamento Otimizada para PPR ---
+
+async def process_and_save_username(
+    username: str,
+    proxy_config,
+    semaphore: asyncio.Semaphore
+) -> dict:
+    async with semaphore:
+        result = await fetch_with_retries(username, proxy_config)
+        
+        # **MELHOR PRÁTICA PARA PPR:**
+        # Apenas envie para o dataset (e conte como resultado) se não houver erro.
+        if result.get("error") is None:
+            await Actor.push_data(result)
+        
+        return result
+
+# --- Função Principal (sem modificação) ---
 
 async def main() -> None:
     async with Actor:
-        # 1. Lê o input
+        Actor.log.info(f"httpx version: {importlib.metadata.version('httpx')}")
+
         inp = await Actor.get_input() or {}
         usernames: list[str] = inp.get("usernames", [])
+        concurrency = inp.get("concurrency", 100)
+
         if not usernames:
             raise ValueError("Input 'usernames' (uma lista de perfis) é obrigatório.")
 
-        # 2. Configura o proxy
-        # 1. Cria a configuração de proxy, solicitando um proxy RESIDENCIAL
+        semaphore = asyncio.Semaphore(concurrency)
         proxy_configuration = await Actor.create_proxy_configuration(groups=['RESIDENTIAL'])
+        
+        total_usernames = len(usernames)
+        processed_count = 0
+        
+        Actor.log.info(f"Iniciando processamento de {total_usernames} usernames com concorrência de {concurrency}.")
 
-        # 2. Cria um cliente HTTP que usará os proxies da Apify
-        async with httpx.AsyncClient(
-            http2=True,
-            proxies=await proxy_configuration.new_httpx_proxy(),
-        ) as http:
+        tasks = []
+        for username in usernames:
+            clean_username = username.strip("@ ")
+            if not clean_username:
+                total_usernames -= 1
+                continue
             
-            # 3. Processa cada perfil
-            for idx, username in enumerate(usernames, 1):
-                # Pega o nome de usuário limpo, sem @ ou espaços
-                clean_username = username.strip("@ ")
-                if not clean_username:
-                    continue
+            task = process_and_save_username(clean_username, proxy_configuration, semaphore)
+            tasks.append(task)
 
-                result = await fetch_profile(http, clean_username)
-
-                # Garante que todas as colunas existem e têm o tipo correto, mesmo em caso de erro
-                row = {
-                    "username": clean_username,
-                    "followers": 0,
-                    "posts_analyzed": 0,
-                    "avg_likes": 0,
-                    "avg_comments": 0,
-                    "engagement_rate_pct": 0.0,
-                    "error": None,
-                }
-                row.update(result)
-                await Actor.push_data(row)
-
-                # Atualiza o status para sabermos o progresso
-                msg = f"{idx}/{len(usernames)} → {clean_username}"
-                if result.get("error"):
-                    msg += f" ❌ ({result['error']})"
-                else:
-                    msg += " ✔"
-                
-                Actor.log.info(msg)
-                await Actor.set_status_message(msg)
-
-                # Pausa para não sobrecarregar o servidor (opcional, mas recomendado)
-                await asyncio.sleep(0.2)
+        for future in asyncio.as_completed(tasks):
+            result = await future
+            processed_count += 1
+            
+            username_processed = result.get('username', 'N/A')
+            msg = f"{processed_count}/{total_usernames} → {username_processed}"
+            
+            if result.get("error"):
+                msg += f" ❌ ({result['error']})"
+            else:
+                msg += " ✔"
+            
+            Actor.log.info(msg)
+            await Actor.set_status_message(msg)
+        
+        Actor.log.info("Processamento concluído.")
