@@ -1,84 +1,83 @@
-## Scrape single-page in Python template
+# Instagram Engagement Rate Calculator
 
-A template for [web scraping](https://apify.com/web-scraping) data from a single web page in Python. The URL of the web page is passed in via input, which is defined by the [input schema](https://docs.apify.com/platform/actors/development/input-schema). The template uses the [HTTPX](https://www.python-httpx.org) to get the HTML of the page and the [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) to parse the data from it. The data are then stored in a [dataset](https://docs.apify.com/sdk/python/docs/concepts/storages#working-with-datasets) where you can easily access them.
+This Apify Actor calculates the engagement rate of any public Instagram profile quickly and efficiently. It does not require a login or cookies, using the platform's public endpoint to extract the data.
 
-The scraped data in this template are page headings but you can easily edit the code to scrape whatever you want from the page.
+The Actor is designed to be robust and scalable, making it ideal for analyzing large lists of profiles for market research, influencer analysis, and competitive studies.
 
-## Included features
+## ✨ Features
 
-- **[Apify SDK](https://docs.apify.com/sdk/python/)** for Python - a toolkit for building Apify [Actors](https://apify.com/actors) and scrapers in Python
-- **[Input schema](https://docs.apify.com/platform/actors/development/input-schema)** - define and easily validate a schema for your Actor's input
-- **[Request queue](https://docs.apify.com/sdk/python/docs/concepts/storages#working-with-request-queues)** - queues into which you can put the URLs you want to scrape
-- **[Dataset](https://docs.apify.com/sdk/python/docs/concepts/storages#working-with-datasets)** - store structured data where each object stored has the same attributes
-- **[HTTPX](https://www.python-httpx.org)** - library for making asynchronous HTTP requests in Python
-- **[Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/)** - library for pulling data out of HTML and XML files
+- **No Login Required:** Does not require your Instagram credentials.
+- **Analyzes Last 12 Posts:** Provides a recent and relevant overview of engagement.
+- **Comprehensive Engagement Metric:** The calculation includes likes, comments, and, for videos, view counts.
+- **High Speed:** Processes hundreds of profiles simultaneously with configurable concurrency.
+- **Robust and Reliable:** Uses the Apify residential proxy network and implements an automatic retry system to handle network errors.
+- **Monetization-Ready:** Optimized for the Pay-per-result (PPR) model.
 
-## How it works
+---
 
-1. `Actor.get_input()` gets the input where the page URL is defined
-2. `httpx.AsyncClient().get(url)` fetches the page
-3. `BeautifulSoup(response.content, 'lxml')` loads the page data and enables parsing the headings
-4. This parses the headings from the page and here you can edit the code to parse whatever you need from the page
-    ```python
-    for heading in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
-    ```
-5. `Actor.push_data(headings)` stores the headings in the dataset
+## 💰 Cost of Usage & Monetization
 
-## Resources
+This Actor is monetized using the **Pay-per-result (PPR)** model.
 
-- [BeautifulSoup Scraper](https://apify.com/apify/beautifulsoup-scraper)
-- [Python tutorials in Academy](https://docs.apify.com/academy/python)
-- [Web scraping with Beautiful Soup and Requests](https://blog.apify.com/web-scraping-with-beautiful-soup/)
-- [Beautiful Soup vs. Scrapy for web scraping](https://blog.apify.com/beautiful-soup-vs-scrapy-web-scraping/)
-- [Integration with Make, GitHub, Zapier, Google Drive, and other apps](https://apify.com/integrations)
-- [Video guide on getting scraped data using Apify API](https://www.youtube.com/watch?v=ViYYDHSBAKM)
-- A short guide on how to build web scrapers using code templates:
+- **Actor Price:** **$0.50 per 1,000 successfully analyzed profiles**.
+- **Apify Platform Costs:** In addition to the Actor's price, you will also be charged for Apify platform usage costs (such as Residential Proxy usage and Compute Units).
 
-[web scraper template](https://www.youtube.com/watch?v=u-i-Korzf8w)
+You only pay for profiles that are successfully processed and return data. Profiles that result in an error after all retries are not counted towards the cost.
 
+---
 
-## Getting started
+## 📥 Input
 
-For complete information [see this article](https://docs.apify.com/platform/actors/development#build-actor-at-apify-console). In short, you will:
+The Actor requires a JSON object with a list of Instagram usernames. You can also optionally adjust the concurrency level.
 
-1. Build the Actor
-2. Run the Actor
+**Input Example:**
 
-## Pull the Actor for local development
+```json
+{
+  "usernames": [
+    "apify",
+    "instagram",
+    "cristiano"
+  ],
+  "concurrency": 100
+}
+```
 
-If you would like to develop locally, you can pull the existing Actor from Apify console using Apify CLI:
+| Field         | Type             | Description                                                                                                 | Default |
+|---------------|------------------|-----------------------------------------------------------------------------------------------------------|---------|
+| `usernames`   | `Array<string>`  | **Required.** A list of Instagram profile usernames to be analyzed.                                       | `[]`    |
+| `concurrency` | `Number`         | **Optional.** The number of profiles to process in parallel. Increasing this value speeds up the execution. | `100`   |
 
-1. Install `apify-cli`
+---
 
-    **Using Homebrew**
+## 📤 Output
 
-    ```bash
-    brew install apify-cli
-    ```
+The Actor returns one result for each successfully analyzed profile.
 
-    **Using NPM**
+**Output Example:**
 
-    ```bash
-    npm -g install apify-cli
-    ```
+```json
+[{
+  "username": "apify",
+  "followers": 1633,
+  "posts_analyzed": 12,
+  "avg_engagement_score": 53,
+  "engagement_rate_pct": 3.25,
+  "error": null
+}]
+```
 
-2. Pull the Actor by its unique `<ActorId>`, which is one of the following:
-    - unique name of the Actor to pull (e.g. "apify/hello-world")
-    - or ID of the Actor to pull (e.g. "E2jjCZBezvAZnX8Rb")
+| Field                    | Type     | Description                                                                 |
+|--------------------------|----------|---------------------------------------------------------------------------|
+| `username`               | `String` | The username of the analyzed profile.                                       |
+| `followers`              | `Number` | The total number of followers for the profile.                              |
+| `posts_analyzed`         | `Number` | The number of recent posts analyzed (up to 12).                           |
+| `avg_engagement_score`   | `Number` | The average number of interactions (likes + comments + views) per post.     |
+| `engagement_rate_pct`    | `Number` | The engagement rate as a percentage. `(avg_engagement_score / followers) * 100` |
+| `error`                  | `String` | If an error occurs, this field will contain the description. Otherwise, it will be `null`. |
 
-    You can find both by clicking on the Actor title at the top of the page, which will open a modal containing both Actor unique name and Actor ID.
+---
 
-    This command will copy the Actor into the current directory on your local machine.
+## ⚠️ Disclaimer
 
-    ```bash
-    apify pull <ActorId>
-    ```
-
-## Documentation reference
-
-To learn more about Apify and Actors, take a look at the following resources:
-
-- [Apify SDK for JavaScript documentation](https://docs.apify.com/sdk/js)
-- [Apify SDK for Python documentation](https://docs.apify.com/sdk/python)
-- [Apify Platform documentation](https://docs.apify.com/platform)
-- [Join our developer community on Discord](https://discord.com/invite/jyEM2PRvMU)
+This Actor is not an official product of Instagram. It was developed independently to extract public data. Use it responsibly and in compliance with the terms of service of both Apify and Instagram.
