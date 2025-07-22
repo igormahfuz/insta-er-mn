@@ -3,5 +3,53 @@
     "name": "instagram-engagement-scraper",
     "version": "0.1",
     "buildTag": "latest",
-    "output": "./output_schema.json"
+    "storages": {
+        "dataset": {
+            "actorSpecification": 1,
+            "views": {
+                "overview": {
+                    "title": "Instagram Engagement Results",
+                    "transformation": {
+                        "fields": [
+                            "username",
+                            "followers",
+                            "posts_analyzed",
+                            "avg_engagement_score",
+                            "engagement_rate_pct",
+                            "error"
+                        ]
+                    },
+                    "display": {
+                        "component": "table",
+                        "properties": {
+                            "username": {
+                                "label": "Username",
+                                "format": "text"
+                            },
+                            "followers": {
+                                "label": "Followers",
+                                "format": "text"
+                            },
+                            "posts_analyzed": {
+                                "label": "Posts Analyzed",
+                                "format": "text"
+                            },
+                            "avg_engagement_score": {
+                                "label": "Avg. Engagement Score",
+                                "format": "text"
+                            },
+                            "engagement_rate_pct": {
+                                "label": "Engagement Rate (%)",
+                                "format": "text"
+                            },
+                            "error": {
+                                "label": "Error",
+                                "format": "text"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
