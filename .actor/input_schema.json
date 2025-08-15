@@ -20,14 +20,9 @@
       "default": 50
     },
     "proxyType": {
-      "title": "Proxy Type",
+      "title": "Proxy Group (or NONE)",
       "type": "string",
-      "description": "Choose the type of proxy to use. RESIDENTIAL is the most reliable but most expensive. DATACENTER is cheaper but may be less reliable. NONE uses no proxy and is likely to be blocked quickly.",
-      "enum": [
-        "RESIDENTIAL",
-        "DATACENTER",
-        "NONE"
-      ],
+      "description": "Enter the exact name of your proxy group from the Apify dashboard (e.g., RESIDENTIAL). To disable proxies, enter NONE.",
       "default": "RESIDENTIAL"
     }
   },
