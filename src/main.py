@@ -120,7 +120,7 @@ async def main() -> None:
             raise ValueError("Input 'usernames' (uma lista de perfis) é obrigatório.")
 
         semaphore = asyncio.Semaphore(concurrency)
-        proxy_configuration = await Actor.create_proxy_configuration(groups=['RESIDENTIAL'])
+        proxy_configuration = await Actor.create_proxy_configuration(groups=['DATACENTER'])
         
         total_usernames = len(usernames)
         processed_count = 0
