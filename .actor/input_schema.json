@@ -16,12 +16,14 @@
     "concurrency": {
       "title": "Concurrency",
       "type": "integer",
+      "editor": "numberInput",
       "description": "Number of profiles to process in parallel. Higher concurrency is faster but may increase the chance of blocks.",
       "default": 50
     },
     "proxyType": {
       "title": "Proxy Group (or NONE)",
       "type": "string",
+      "editor": "textInput",
       "description": "Enter the exact name of your proxy group from the Apify dashboard (e.g., RESIDENTIAL). To disable proxies, enter NONE.",
       "default": "RESIDENTIAL"
     }
