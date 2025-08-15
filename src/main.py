@@ -60,6 +60,9 @@ async def fetch_profile(client: httpx.AsyncClient, username: str) -> dict:
             "posts_analyzed": n_posts,
             "avg_engagement_score": math.floor(avg_engagement_score),
             "engagement_rate_pct": round(er, 2),
+            "biography": data.get("biography"),
+            "business_email": data.get("business_email"),
+            "business_phone_number": data.get("business_phone_number"),
             "error": None,
         }
     except Exception as e:
