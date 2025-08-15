@@ -1,18 +1,37 @@
 {
-  "title": "Instagram ER scraper",
+  "title": "Instagram Profile Scraper Input",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
     "usernames": {
-      "title": "Usernames (um por linha)",
+      "title": "Instagram Usernames",
       "type": "array",
       "editor": "stringList",
-      "description": "Cole aqui os usernames do Instagram, sem o @.",
+      "description": "Enter a list of Instagram usernames to scrape.",
       "prefill": [
-        "kyliejenner",
-        "justinbieber"
+        "apify",
+        "instagram"
       ]
+    },
+    "concurrency": {
+      "title": "Concurrency",
+      "type": "integer",
+      "description": "Number of profiles to process in parallel. Higher concurrency is faster but may increase the chance of blocks.",
+      "default": 50
+    },
+    "proxyType": {
+      "title": "Proxy Type",
+      "type": "string",
+      "description": "Choose the type of proxy to use. RESIDENTIAL is the most reliable but most expensive. DATACENTER is cheaper but may be less reliable. NONE uses no proxy and is likely to be blocked quickly.",
+      "enum": [
+        "RESIDENTIAL",
+        "DATACENTER",
+        "NONE"
+      ],
+      "default": "RESIDENTIAL"
     }
   },
-  "required": ["usernames"]
+  "required": [
+    "usernames"
+  ]
 }
