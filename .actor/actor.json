@@ -8,17 +8,22 @@
             "actorSpecification": 1,
             "views": {
                 "overview": {
-                    "title": "Instagram Engagement Results",
+                    "title": "Instagram Profile Details",
                     "transformation": {
                         "fields": [
                             "username",
                             "followers",
-                            "posts_analyzed",
-                            "avg_engagement_score",
+                            "following",
                             "engagement_rate_pct",
+                            "avg_likes",
+                            "avg_comments",
+                            "category_name",
                             "biography",
+                            "external_url",
                             "business_email",
                             "business_phone_number",
+                            "profile_pic_url_hd",
+                            "recent_posts",
                             "error"
                         ]
                     },
@@ -31,23 +36,35 @@
                             },
                             "followers": {
                                 "label": "Followers",
-                                "format": "text"
+                                "format": "number"
                             },
-                            "posts_analyzed": {
-                                "label": "Posts Analyzed",
-                                "format": "text"
-                            },
-                            "avg_engagement_score": {
-                                "label": "Avg. Engagement Score",
-                                "format": "text"
+                            "following": {
+                                "label": "Following",
+                                "format": "number"
                             },
                             "engagement_rate_pct": {
                                 "label": "Engagement Rate (%)",
+                                "format": "number"
+                            },
+                            "avg_likes": {
+                                "label": "Avg. Likes",
+                                "format": "number"
+                            },
+                            "avg_comments": {
+                                "label": "Avg. Comments",
+                                "format": "number"
+                            },
+                            "category_name": {
+                                "label": "Category",
                                 "format": "text"
                             },
                             "biography": {
                                 "label": "Biography",
                                 "format": "text"
+                            },
+                            "external_url": {
+                                "label": "Website",
+                                "format": "url"
                             },
                             "business_email": {
                                 "label": "Email",
@@ -56,6 +73,14 @@
                             "business_phone_number": {
                                 "label": "Phone",
                                 "format": "text"
+                            },
+                            "profile_pic_url_hd": {
+                                "label": "Profile Picture HD",
+                                "format": "url"
+                            },
+                            "recent_posts": {
+                                "label": "Recent Posts",
+                                "format": "json"
                             },
                             "error": {
                                 "label": "Error",
