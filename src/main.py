@@ -40,29 +40,63 @@ async def fetch_profile(client: httpx.AsyncClient, username: str) -> dict:
             return {"username": username, "error": "perfil inexistente/privado"}
 
         followers = data.get("edge_followed_by", {}).get("count", 0)
+        following = data.get("edge_follow", {}).get("count", 0)
+        
         edges = data.get("edge_owner_to_timeline_media", {}).get("edges", [])[:12]
 
-        total_engagement_score = 0
+        total_likes = 0
+        total_comments = 0
+        total_video_views = 0
+        video_post_count = 0
+        recent_posts = []
+
         for edge in edges:
             node = edge.get("node", {})
-            post_score = node.get("edge_liked_by", {}).get("count", 0) + node.get("edge_media_to_comment", {}).get("count", 0)
-            if node.get('is_video', False):
-                post_score += node.get('video_view_count', 0)
-            total_engagement_score += post_score
+            likes = node.get("edge_liked_by", {}).get("count", 0)
+            comments = node.get("edge_media_to_comment", {}).get("count", 0)
+            video_views = node.get("video_view_count", 0) if node.get('is_video') else None
+
+            total_likes += likes
+            total_comments += comments
+            if video_views is not None:
+                total_video_views += video_views
+                video_post_count += 1
+
+            post_details = {
+                "url": f"https://www.instagram.com/p/{node.get('shortcode')}/",
+                "likes": likes,
+                "comments": comments,
+                "video_views": video_views,
+                "caption": node.get("edge_media_to_caption", {}).get("edges", [{}])[0].get("node", {}).get("text", ""),
+                "thumbnail_src": node.get("thumbnail_src"),
+            }
+            recent_posts.append(post_details)
 
         n_posts = max(len(edges), 1)
+        avg_likes = total_likes / n_posts
+        avg_comments = total_comments / n_posts
+        avg_video_views = total_video_views / video_post_count if video_post_count > 0 else 0
+
+        total_engagement_score = total_likes + total_comments + total_video_views
         avg_engagement_score = total_engagement_score / n_posts
         er = (avg_engagement_score / followers) * 100 if followers else 0
 
         return {
             "username": username,
             "followers": followers,
-            "posts_analyzed": n_posts,
-            "avg_engagement_score": math.floor(avg_engagement_score),
-            "engagement_rate_pct": round(er, 2),
+            "following": following,
+            "profile_pic_url_hd": data.get("profile_pic_url_hd"),
             "biography": data.get("biography"),
+            "external_url": data.get("external_url"),
             "business_email": data.get("business_email"),
             "business_phone_number": data.get("business_phone_number"),
+            "category_name": data.get("category_name"),
+            "posts_analyzed": n_posts,
+            "avg_likes": math.floor(avg_likes),
+            "avg_comments": math.floor(avg_comments),
+            "avg_video_views": math.floor(avg_video_views),
+            "engagement_rate_pct": round(er, 2),
+            "recent_posts": recent_posts,
             "error": None,
         }
     except Exception as e:
