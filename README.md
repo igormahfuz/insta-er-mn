@@ -28,7 +28,7 @@ You only pay for profiles that are successfully processed and return data. Profi
 
 ## 📥 Input
 
-The Actor requires a JSON object with a list of Instagram usernames. You can also optionally adjust the concurrency level.
+The Actor requires a list of Instagram usernames and allows you to configure the proxy settings and concurrency.
 
 **Input Example:**
 
@@ -36,17 +36,18 @@ The Actor requires a JSON object with a list of Instagram usernames. You can als
 {
   "usernames": [
     "apify",
-    "instagram",
-    "cristiano"
+    "instagram"
   ],
-  "concurrency": 100
+  "concurrency": 50,
+  "proxyGroup": "RESIDENTIAL"
 }
 ```
 
-| Field         | Type             | Description                                                                                                 | Default |
-|---------------|------------------|-----------------------------------------------------------------------------------------------------------|---------|
-| `usernames`   | `Array<string>`  | **Required.** A list of Instagram profile usernames to be analyzed.                                       | `[]`    |
-| `concurrency` | `Number`         | **Optional.** The number of profiles to process in parallel. Increasing this value speeds up the execution. | `100`   |
+| Field         | Type             | Description                                                                                                                                                           | Default       |
+|---------------|------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| `usernames`   | `Array<string>`  | **Required.** A list of Instagram profile usernames to be analyzed.                                                                                                   | `[]`          |
+| `concurrency` | `Number`         | **Optional.** The number of profiles to process in parallel. A lower number is slower but less likely to be blocked.                                                  | `50`          |
+| `proxyGroup`  | `String`         | **Optional.** The name of the Apify proxy group to use. To find your available group names, go to the Proxy section in your Apify dashboard. To disable proxies, enter `NONE`. | `RESIDENTIAL` |
 
 ---
 
