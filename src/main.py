@@ -102,48 +102,45 @@ async def fetch_profile(client: httpx.AsyncClient, username: str) -> dict:
     except Exception as e:
         raise e
 
-# --- Wrapper com Retentativas (sem modificação) ---
-
-async def fetch_with_retries(username: str, proxy_config) -> dict:
+async def fetch_with_retries(username: str, proxy_config, use_proxy: bool) -> dict:
     MAX_RETRIES = 3
     BASE_DELAY_SECONDS = 2
     last_error = None
 
     for attempt in range(MAX_RETRIES):
         try:
-            session_id = f'session_{username}_{attempt}'
-            proxy_url = await proxy_config.new_url(session_id=session_id)
-            transport = httpx.AsyncHTTPTransport(proxy=proxy_url)
-            async with httpx.AsyncClient(transport=transport) as client:
-                return await fetch_profile(client, username)
+            if use_proxy:
+                session_id = f'session_{username}_{attempt}'
+                proxy_url = await proxy_config.new_url(session_id=session_id)
+                transport = httpx.AsyncHTTPTransport(proxy=proxy_url)
+                async with httpx.AsyncClient(transport=transport) as client:
+                    return await fetch_profile(client, username)
+            else:
+                async with httpx.AsyncClient() as client:
+                    return await fetch_profile(client, username)
         except (httpx.HTTPStatusError, httpx.ProxyError, httpx.ReadTimeout) as e:
             last_error = e
-            Actor.log.warning(f"Tentativa {attempt + 1}/{MAX_RETRIES} falhou para '{username}': {type(e).__name__}. Retentando...")
+            Actor.log.warning(f"Attempt {attempt + 1}/{MAX_RETRIES} failed for '{username}': {type(e).__name__}. Retrying...")
             delay = BASE_DELAY_SECONDS * (2 ** attempt)
             await asyncio.sleep(delay)
         except Exception as e:
-            return {"username": username, "error": f"Erro inesperado: {type(e).__name__}: {e}"}
+            return {"username": username, "error": f"Unexpected error: {type(e).__name__}: {e}"}
 
-    return {"username": username, "error": f"Falha após {MAX_RETRIES} tentativas: {type(last_error).__name__}"}
-
-# --- Função de Processamento Otimizada para PPR ---
+    return {"username": username, "error": f"Failed after {MAX_RETRIES} attempts: {type(last_error).__name__}"}
 
 async def process_and_save_username(
     username: str,
     proxy_config,
-    semaphore: asyncio.Semaphore
+    semaphore: asyncio.Semaphore,
+    use_proxy: bool
 ) -> dict:
     async with semaphore:
-        result = await fetch_with_retries(username, proxy_config)
+        result = await fetch_with_retries(username, proxy_config, use_proxy)
         
-        # **MELHOR PRÁTICA PARA PPR:**
-        # Apenas envie para o dataset (e conte como resultado) se não houver erro.
         if result.get("error") is None:
             await Actor.push_data(result)
         
         return result
-
-# --- Função Principal (sem modificação) ---
 
 async def main() -> None:
     async with Actor:
@@ -151,18 +148,32 @@ async def main() -> None:
 
         inp = await Actor.get_input() or {}
         usernames: list[str] = inp.get("usernames", [])
-        concurrency = inp.get("concurrency", 100)
+        concurrency = inp.get("concurrency", 50)
+        proxy_type = inp.get("proxyType", "RESIDENTIAL")
 
         if not usernames:
-            raise ValueError("Input 'usernames' (uma lista de perfis) é obrigatório.")
+            raise ValueError("Input 'usernames' is required.")
+
+        proxy_configuration = None
+        use_proxy = True
+        if proxy_type == "NONE":
+            use_proxy = False
+            Actor.log.info("Proxy is disabled.")
+        else:
+            Actor.log.info(f"Using {proxy_type} proxies.")
+            try:
+                proxy_configuration = await Actor.create_proxy_configuration(groups=[proxy_type])
+            except Exception as e:
+                Actor.log.error(f"Could not create proxy configuration for group '{proxy_type}'. "
+                              f"This might be a permission issue with your Apify account. Error: {e}")
+                raise
 
         semaphore = asyncio.Semaphore(concurrency)
-        proxy_configuration = await Actor.create_proxy_configuration()
         
         total_usernames = len(usernames)
         processed_count = 0
         
-        Actor.log.info(f"Iniciando processamento de {total_usernames} usernames com concorrência de {concurrency}.")
+        Actor.log.info(f"Starting processing of {total_usernames} usernames with concurrency {concurrency}.")
 
         tasks = []
         for username in usernames:
@@ -171,7 +182,7 @@ async def main() -> None:
                 total_usernames -= 1
                 continue
             
-            task = process_and_save_username(clean_username, proxy_configuration, semaphore)
+            task = process_and_save_username(clean_username, proxy_configuration, semaphore, use_proxy)
             tasks.append(task)
 
         for future in asyncio.as_completed(tasks):
@@ -189,4 +200,4 @@ async def main() -> None:
             Actor.log.info(msg)
             await Actor.set_status_message(msg)
         
-        Actor.log.info("Processamento concluído.")
+        Actor.log.info("Processing finished.")
