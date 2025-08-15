@@ -16,6 +16,9 @@
                             "posts_analyzed",
                             "avg_engagement_score",
                             "engagement_rate_pct",
+                            "biography",
+                            "business_email",
+                            "business_phone_number",
                             "error"
                         ]
                     },
@@ -40,6 +43,18 @@
                             },
                             "engagement_rate_pct": {
                                 "label": "Engagement Rate (%)",
+                                "format": "text"
+                            },
+                            "biography": {
+                                "label": "Biography",
+                                "format": "text"
+                            },
+                            "business_email": {
+                                "label": "Email",
+                                "format": "text"
+                            },
+                            "business_phone_number": {
+                                "label": "Phone",
                                 "format": "text"
                             },
                             "error": {
